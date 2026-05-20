@@ -108,6 +108,8 @@ function Lightbox({
           key={index}
           src={images[index]}
           alt={`${acc.name} ${index + 1}`}
+          loading="lazy"
+          decoding="async"
           className="w-full aspect-video object-contain rounded-2xl animate-fade-in"
         />
 
@@ -136,7 +138,7 @@ function Lightbox({
                 i === index ? 'border-emerald-500 scale-110' : 'border-transparent opacity-40 hover:opacity-70'
               }`}
             >
-              <img src={img} alt={`thumb ${i}`} className="w-full h-full object-cover" />
+              <img src={img} alt={`thumb ${i}`} loading="lazy" decoding="async" className="w-full h-full object-cover" />
             </button>
           ))}
         </div>
@@ -167,6 +169,7 @@ function AccCard({
           src={acc.images[0]}
           alt={acc.name}
           loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
 

@@ -102,7 +102,9 @@ export default function GalleryPage() {
                 <img
                   src={img}
                   alt={`Casamance ${i + 1}`}
-                  loading={i < 8 ? 'eager' : 'lazy'}
+                  loading={i < 4 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  fetchPriority={i < 4 ? 'high' : 'auto'}
                   className="w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center">
@@ -130,7 +132,8 @@ export default function GalleryPage() {
                 <img
                   src={`https://i.ytimg.com/vi/${id}/mqdefault.jpg`}
                   alt={`Vidéo ${i + 1}`}
-                  loading={i < 10 ? 'eager' : 'lazy'}
+                  loading={i < 6 ? 'eager' : 'lazy'}
+                  decoding="async"
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 {/* Overlay play */}

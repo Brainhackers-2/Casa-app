@@ -106,6 +106,8 @@ function GuideOverlay({
                   <img
                     src={guide.image}
                     alt={guide.name}
+                    loading="lazy"
+                    decoding="async"
                     className="w-16 h-16 rounded-2xl object-cover flex-shrink-0"
                   />
                   <div className="min-w-0">
@@ -278,6 +280,7 @@ function ActivityCard({
           src={activity.image}
           alt={activity.name}
           loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
       </div>
