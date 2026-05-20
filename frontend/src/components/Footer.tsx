@@ -62,7 +62,7 @@ export default function Footer() {
   const { t } = useTranslation();
   const formRef = useRef<HTMLFormElement>(null);
 
-  const qrData = encodeURIComponent('https://casamance-tourisme-xiih.vercel.app/');
+  const qrData = encodeURIComponent('https://casa-app-si1v.vercel.app/');
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${qrData}&margin=1`;
 
   const handleNewsletter = (e: React.SyntheticEvent<HTMLFormElement>) => {
