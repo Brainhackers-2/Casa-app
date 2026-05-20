@@ -1,6 +1,8 @@
+# Backend Laravel (non déployé — utiliser Supabase)
+backend/
+
 # Dépendances
 frontend/node_modules/
-backend/vendor/
 
 # Builds
 frontend/dist/
@@ -9,8 +11,6 @@ frontend/dist/
 frontend/.env
 frontend/.env.local
 frontend/.env.*.local
-backend/.env
-backend/.env.local
 
 # Système
 .DS_Store
