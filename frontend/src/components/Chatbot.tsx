@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Bot, Loader2, Mic, MicOff } from 'lucide-react';
-
 import ReactMarkdown from 'react-markdown';
-import { GoogleGenAI } from '@google/genai';
+import Groq from 'groq-sdk';
 import { useTranslation } from '../context/LanguageContext';
 import {
   LOCATIONS, ACTIVITIES, GUIDES, ACCOMMODATIONS,
@@ -17,8 +16,8 @@ interface Message {
 
 /* ── Messages de bienvenue ──────────────────────────────────── */
 const WELCOME: Record<string, string> = {
-  fr: 'Bonjour ! Je suis votre assistant Casamance Tour. Comment puis-je vous aider ?',
-  en: 'Hello! I am your Casamance Tour assistant. How can I help you today?',
+  fr: 'Bonjour ! Je suis votre assistant Casamance Tour. Posez-moi toutes vos questions sur la Casamance, le Sénégal ou nos offres !',
+  en: 'Hello! I am your Casamance Tour assistant. Ask me anything about Casamance, Senegal or our offers!',
   wo: 'Nanga def ! Maay sa ndimbal ci Casamance Tour.',
   dyo: 'Kassoumaye ! Inje n-dimbal nu.',
 };
@@ -27,43 +26,134 @@ function getWelcome(lang: string): string {
   return WELCOME[lang] ?? WELCOME['fr'];
 }
 
-/* ── Données contexte (noms uniquement) ─────────────────────── */
-function buildContextData() {
-  return {
-    activites:            ACTIVITIES.map(a => a.name).join(', '),
-    hebergements:         ACCOMMODATIONS.map(a => a.name).join(', '),
-    gastronomie_plats:    DISHES.map(d => d.name).join(', '),
-    gastronomie_boissons: DRINKS.map(d => d.name).join(', '),
-    guides:               GUIDES.map(g => g.name).join(', '),
-    lieux:                LOCATIONS.map(l => l.name).join(', '),
-    evenements:           AGENDA_EVENTS.map(e => e.title).join(', '),
-  };
+/* ── Contexte enrichi du site ───────────────────────────────── */
+function buildSiteContext(): string {
+  const lieux = LOCATIONS.map(l =>
+    `• ${l.name} (${l.region} — ${l.category}) : ${l.description}`
+  ).join('\n');
+
+  const activites = ACTIVITIES.map(a =>
+    `• ${a.name} | Type: ${a.type} | Région: ${a.region} | Durée: ${a.duration} | Prix: ${a.price?.toLocaleString('fr-FR')} FCFA — ${a.description}`
+  ).join('\n');
+
+  const hebergements = ACCOMMODATIONS.map(a =>
+    `• ${a.name} (${(a as any).region ?? ''}) : ${(a as any).description ?? ''}`
+  ).join('\n');
+
+  const plats = DISHES.map(d =>
+    `• ${d.name} : ${(d as any).description ?? ''}`
+  ).join('\n');
+
+  const boissons = DRINKS.map(d =>
+    `• ${d.name} : ${(d as any).description ?? ''}`
+  ).join('\n');
+
+  const guides = GUIDES.map(g =>
+    `• ${g.name} — Spécialité: ${(g as any).specialty ?? ''} : ${(g as any).description ?? ''}`
+  ).join('\n');
+
+  const evenements = AGENDA_EVENTS.map(e =>
+    `• ${e.title} (${(e as any).date ?? ''}, ${(e as any).location ?? ''}) : ${(e as any).description ?? ''}`
+  ).join('\n');
+
+  return `
+=== LIEUX & DESTINATIONS ===
+${lieux}
+
+=== ACTIVITÉS ===
+${activites}
+
+=== HÉBERGEMENTS ===
+${hebergements}
+
+=== GASTRONOMIE — PLATS ===
+${plats}
+
+=== GASTRONOMIE — BOISSONS ===
+${boissons}
+
+=== GUIDES TOURISTIQUES ===
+${guides}
+
+=== AGENDA & ÉVÉNEMENTS ===
+${evenements}
+`.trim();
 }
 
-/* ── Prompt système ─────────────────────────────────────────── */
+/* ── Prompt système complet ─────────────────────────────────── */
 function buildSystemPrompt(langLabel: string): string {
-  const d = buildContextData();
-  return `Tu es un assistant touristique expert pour la plateforme Casamance Tour.
-IMPORTANT: Tu dois impérativement répondre en ${langLabel}.
+  const siteContext = buildSiteContext();
 
-Ton rôle :
-- Aider les utilisateurs à planifier leur voyage en Casamance.
-- Proposer des activités, hébergements, plats, boissons, guides, lieux ou événements disponibles EXACTEMENT selon les données de notre site.
+  return `Tu es un assistant touristique expert de **Casamance Tour**, une plateforme dédiée au tourisme en Casamance, au Sénégal. Tu réponds impérativement en ${langLabel}.
 
-Voici les données du site à utiliser pour répondre :
-Activités : ${d.activites}
-Hébergements : ${d.hebergements}
-Plats : ${d.gastronomie_plats}
-Boissons : ${d.gastronomie_boissons}
-Guides : ${d.guides}
-Lieux : ${d.lieux}
-Événements : ${d.evenements}
+## TES DOMAINES DE COMPÉTENCE
 
-Tes réponses doivent être directes, utiles, chaleureuses et concises.
-Cite les noms exacts de notre base de données. N'hésite pas à conseiller aux utilisateurs de consulter les rubriques (Activités, Hébergements, Gastronomie, Guides, Agenda) dans le menu principal.`;
+1. **Les offres de Casamance Tour** : lieux, activités, hébergements, gastronomie, guides, événements — utilise les données exactes ci-dessous.
+2. **Tourisme en Casamance** : culture, histoire, géographie, conseils pratiques, vie locale.
+3. **Tourisme au Sénégal** : toutes les destinations, informations générales.
+
+---
+
+## DONNÉES DU SITE CASAMANCE TOUR
+
+${siteContext}
+
+---
+
+## CONNAISSANCE GÉNÉRALE — CASAMANCE & SÉNÉGAL
+
+### Géographie
+La Casamance est au sud du Sénégal, séparée du nord par la Gambie. Elle comprend :
+- **Ziguinchor** (Basse-Casamance) : la plus touristique — plages, mangroves, culture Diola.
+- **Sédhiou** (Moyenne-Casamance) : fleuve Casamance, cultures Mandingue et Balante.
+- **Kolda** (Haute-Casamance) : culture Peul, porte du Parc du Niokolo-Koba.
+
+### Cultures & Peuples
+- **Diola (Joola)** : peuple autochtone de la Basse-Casamance, traditionnellement animistes, cultivateurs de riz, célèbres pour leurs rites initiatiques (Boukout, Kankourang — UNESCO).
+- **Mandingues** : commerçants, musulmans, artisans du cuir, présents surtout en Moyenne-Casamance.
+- **Peuls (Fula)** : éleveurs nomades, artisanat reconnu, implantés en Haute-Casamance.
+- **Balante** : agriculteurs traditionnels, villages en banco.
+
+### Comment venir en Casamance
+- **Avion** : Dakar (AIBD) → Ziguinchor ou Cap Skirring avec Air Sénégal / Transair (~1h, à partir de 35 000 FCFA).
+- **Ferry** : Dakar → Ziguinchor avec le Joola II (12-18h, traversée sur l'Atlantique, départs plusieurs fois/semaine).
+- **Route** : via la Gambie (~8-10h depuis Dakar), ou route nationale 4 par le Nord.
+- **Bus** : compagnies DDD, Viateur, Cars Diallo depuis Dakar.
+
+### Meilleure période pour visiter
+- **Novembre à mai** : saison sèche, idéale — plages, randonnées, festivals.
+- **Juin à octobre** : hivernage (saison des pluies) — nature luxuriante, moins de touristes, certaines routes difficiles.
+
+### Infos pratiques
+- **Monnaie** : Franc CFA (XOF) — 1 € ≈ 655 FCFA, 1 USD ≈ 610 FCFA.
+- **Langues** : Français (officiel), Diola (Joola), Mandingue, Pulaar, Wolof.
+- **Santé** : vaccin fièvre jaune obligatoire, prophylaxie antipaludéenne recommandée.
+- **Sécurité** : situation calme depuis 2014. Se renseigner avant tout séjour.
+- **Urgences** : Police 17, Pompiers 18, SAMU 15.
+- **Réseau** : Orange, Free, Expresso — couverture correcte en ville.
+
+### Gastronomie sénégalaise (hors site)
+Thiéboudienne (riz au poisson — plat national), Yassa poulet, Mafé (sauce arachide), Caldou, Domoda, Benachin.
+Boissons : Bissap (hibiscus), Bouye (baobab), Ditakh, Wonjo, Thiakry (mil fermenté).
+
+### Tourisme au Sénégal — autres destinations
+- **Dakar** : capitale cosmopolite, Île de Gorée (UNESCO), plages de Yoff et Ngor, surf, musées.
+- **Saint-Louis** : ancienne capitale coloniale, jazz festival, parc des oiseaux du Djoudj (UNESCO).
+- **Sine-Saloum** : delta et mangroves, pêche, pirogue, campements.
+- **Thiès** : tapisseries renommées, artisanat.
+- **Touba** : ville sainte mouride, grande mosquée.
+- **Parc du Niokolo-Koba** : UNESCO, lions, éléphants, hippos, 350+ espèces d'oiseaux.
+
+---
+
+## TON STYLE DE RÉPONSE
+- Chaleureux, professionnel, passionné par la Casamance.
+- Réponses **concises mais complètes** — utilise des listes, des titres courts si nécessaire.
+- Cite les **noms exacts** des offres du site quand pertinent.
+- Si la question touche une rubrique du site, invite l'utilisateur à la consulter (Activités, Hébergements, Gastronomie, Guides, Agenda).
+- Pour les questions hors tourisme, réponds poliment que tu es spécialisé dans le tourisme au Sénégal.`;
 }
 
-/* ── Composant principal ────────────────────────────────────── */
 /* ── Locale pour la reconnaissance vocale ───────────────────── */
 const SPEECH_LOCALES: Record<string, string> = {
   fr:  'fr-FR',
@@ -74,11 +164,12 @@ const SPEECH_LOCALES: Record<string, string> = {
   ff:  'fr-GN',
 };
 
+/* ── Composant principal ────────────────────────────────────── */
 export default function Chatbot() {
-  const [isOpen, setIsOpen]       = useState(false);
-  const [messages, setMessages]   = useState<Message[]>([]);
-  const [input, setInput]         = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isOpen, setIsOpen]           = useState(false);
+  const [messages, setMessages]       = useState<Message[]>([]);
+  const [input, setInput]             = useState('');
+  const [isLoading, setIsLoading]     = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const scrollRef      = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -90,7 +181,7 @@ export default function Chatbot() {
     setMessages([{ role: 'bot', text: getWelcome(lang) }]);
   }, [lang]);
 
-  /* Nettoyage reconnaissance vocale au démontage */
+  /* Nettoyage reconnaissance vocale */
   useEffect(() => {
     return () => { recognitionRef.current?.stop(); };
   }, []);
@@ -99,25 +190,21 @@ export default function Chatbot() {
   const toggleRecording = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
     if (!SpeechRec) {
       alert('Votre navigateur ne supporte pas la reconnaissance vocale. Utilisez Chrome ou Edge.');
       return;
     }
-
     if (isRecording) {
       recognitionRef.current?.stop();
       setIsRecording(false);
       return;
     }
-
     const recognition = new SpeechRec();
-    recognition.lang            = SPEECH_LOCALES[lang] ?? 'fr-FR';
-    recognition.continuous      = false;
-    recognition.interimResults  = true;
+    recognition.lang           = SPEECH_LOCALES[lang] ?? 'fr-FR';
+    recognition.continuous     = false;
+    recognition.interimResults = true;
 
-    recognition.onstart = () => setIsRecording(true);
-
+    recognition.onstart  = () => setIsRecording(true);
     recognition.onresult = (event: any) => {
       let transcript = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -125,20 +212,12 @@ export default function Chatbot() {
       }
       setInput(transcript);
     };
-
-    recognition.onend = () => {
-      setIsRecording(false);
-      recognitionRef.current = null;
-    };
-
+    recognition.onend   = () => { setIsRecording(false); recognitionRef.current = null; };
     recognition.onerror = (event: any) => {
-      if (event.error !== 'no-speech') {
-        console.error('Speech error:', event.error);
-      }
+      if (event.error !== 'no-speech') console.error('Speech error:', event.error);
       setIsRecording(false);
       recognitionRef.current = null;
     };
-
     recognitionRef.current = recognition;
     recognition.start();
   };
@@ -150,59 +229,62 @@ export default function Chatbot() {
     }
   }, [messages, isOpen]);
 
+  /* ── Envoi du message via Groq ──────────────────────────────── */
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
     const userMsg = input.trim();
     setInput('');
 
-    // Ajoute message user + placeholder bot vide
     setMessages(prev => [
       ...prev,
       { role: 'user', text: userMsg },
-      { role: 'bot', text: '' },
+      { role: 'bot',  text: '' },
     ]);
     setIsLoading(true);
 
     try {
-      const apiKey =
-        (typeof process !== 'undefined' && process.env?.API_KEY) ||
-        (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) ||
-        (import.meta as any).env.VITE_GEMINI_API_KEY;
-
-      const ai = new GoogleGenAI({ apiKey });
-
-      /* Historique pour Gemini */
-      const contents = messages.map(msg => ({
-        role: msg.role === 'bot' ? 'model' : 'user',
-        parts: [{ text: msg.text }],
-      }));
-      contents.push({ role: 'user', parts: [{ text: userMsg }] });
+      const apiKey = import.meta.env.VITE_GROQ_API_KEY as string;
+      const groq = new Groq({ apiKey, dangerouslyAllowBrowser: true });
 
       const langLabel = t(`lang.${lang}`) || lang;
-      const systemInstruction = buildSystemPrompt(langLabel);
 
-      const responseStream = await ai.models.generateContentStream({
-        model: 'gemini-2.5-flash',
-        contents,
-        config: { systemInstruction },
+      /* Historique de la conversation (sans le placeholder vide) */
+      const history = messages
+        .filter(m => m.text !== '')
+        .map(m => ({
+          role:    m.role === 'bot' ? ('assistant' as const) : ('user' as const),
+          content: m.text,
+        }));
+
+      const stream = await groq.chat.completions.create({
+        model:       'llama-3.3-70b-versatile',
+        max_tokens:  2048,
+        temperature: 0.7,
+        stream:      true,
+        messages: [
+          { role: 'system', content: buildSystemPrompt(langLabel) },
+          ...history,
+          { role: 'user',   content: userMsg },
+        ],
       });
 
-      let fullBotText = '';
-      for await (const chunk of responseStream) {
-        fullBotText += chunk.text ?? '';
+      let fullText = '';
+      for await (const chunk of stream) {
+        fullText += chunk.choices[0]?.delta?.content ?? '';
         setMessages(prev => {
           const updated = [...prev];
-          updated[updated.length - 1] = { role: 'bot', text: fullBotText };
+          updated[updated.length - 1] = { role: 'bot', text: fullText };
           return updated;
         });
       }
-    } catch {
+    } catch (err) {
+      console.error('Groq error:', err);
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = {
           role: 'bot',
-          text: 'Service indisponible ou clé API non configurée.',
+          text: 'Service indisponible. Vérifiez votre clé VITE_GROQ_API_KEY dans le fichier .env.',
         };
         return updated;
       });
@@ -211,9 +293,10 @@ export default function Chatbot() {
     }
   };
 
+  /* ── Rendu ──────────────────────────────────────────────────── */
   return (
     <>
-      {/* ── Bouton flottant ──────────────────────────────────── */}
+      {/* Bouton flottant */}
       <button
         onClick={() => setIsOpen(o => !o)}
         className="fixed bottom-6 right-6 z-[60] flex items-center gap-2 bg-[#1A3C34] text-[#fdfbf7] px-4 py-3 rounded-full shadow-[0_8px_30px_rgba(26,60,52,0.3)] hover:scale-105 active:scale-95 transition-all duration-200"
@@ -223,14 +306,11 @@ export default function Chatbot() {
         <span className="hidden sm:inline text-sm font-medium">{t('nav.contact')}</span>
       </button>
 
-      {/* ── Fenêtre de chat ──────────────────────────────────── */}
+      {/* Fenêtre de chat */}
       {isOpen && (
         <div
           className="fixed bottom-24 right-6 z-[60] flex flex-col bg-[#fdfbf7] rounded-2xl shadow-2xl overflow-hidden animate-fade-in"
-          style={{
-            width: 'min(400px, calc(100vw - 3rem))',
-            height: 'min(600px, calc(100vh - 6rem))',
-          }}
+          style={{ width: 'min(400px, calc(100vw - 3rem))', height: 'min(600px, calc(100vh - 6rem))' }}
         >
           {/* Header */}
           <div className="flex items-center justify-between bg-[#1A3C34] px-5 py-4 border-b border-black/10 flex-shrink-0">
@@ -254,43 +334,28 @@ export default function Chatbot() {
           </div>
 
           {/* Messages */}
-          <div
-            ref={scrollRef}
-            className="flex-grow overflow-y-auto p-5 space-y-5 bg-[#fdfbf7]"
-          >
+          <div ref={scrollRef} className="flex-grow overflow-y-auto p-5 space-y-5 bg-[#fdfbf7]">
             {messages.map((msg, i) =>
               msg.role === 'user' ? (
-                /* Message utilisateur */
                 <div key={i} className="flex justify-end">
                   <div className="bg-[#1A3C34] text-[#fdfbf7] rounded-l-2xl rounded-tr-2xl rounded-br-sm max-w-[85%] px-4 py-3 text-[15px] leading-relaxed">
                     {msg.text}
                   </div>
                 </div>
               ) : (
-                /* Message bot */
                 <div key={i} className="flex justify-start">
                   {msg.text === '' && isLoading ? (
-                    /* Indicateur chargement */
                     <div className="bg-white border border-[#1A3C34]/10 rounded-r-2xl rounded-tl-2xl rounded-bl-sm px-4 py-3">
                       <Loader2 size={18} className="animate-spin text-[#1A3C34]" />
                     </div>
                   ) : (
-                    /* Réponse Markdown */
                     <div className="bg-white border border-[#1A3C34]/10 rounded-r-2xl rounded-tl-2xl rounded-bl-sm max-w-[85%] px-4 py-3 text-[15px] prose prose-sm max-w-none">
                       <ReactMarkdown
                         components={{
-                          a: ({ ...props }) => (
-                            <a {...props} className="text-[#1A3C34] hover:underline" />
-                          ),
-                          strong: ({ ...props }) => (
-                            <strong {...props} className="font-bold text-gray-900" />
-                          ),
-                          ul: ({ ...props }) => (
-                            <ul {...props} className="space-y-1 my-2 pl-4 list-disc" />
-                          ),
-                          ol: ({ ...props }) => (
-                            <ol {...props} className="space-y-1 my-2 pl-4 list-decimal" />
-                          ),
+                          a:      ({ ...props }) => <a      {...props} className="text-[#1A3C34] hover:underline" />,
+                          strong: ({ ...props }) => <strong {...props} className="font-bold text-gray-900" />,
+                          ul:     ({ ...props }) => <ul     {...props} className="space-y-1 my-2 pl-4 list-disc" />,
+                          ol:     ({ ...props }) => <ol     {...props} className="space-y-1 my-2 pl-4 list-decimal" />,
                         }}
                       >
                         {msg.text}
@@ -304,11 +369,10 @@ export default function Chatbot() {
 
           {/* Zone de saisie */}
           <div className="flex-shrink-0 p-4 bg-white border-t border-[#1A3C34]/10 space-y-2">
-            {/* Indicateur enregistrement */}
             {isRecording && (
               <div className="flex items-center gap-2 px-4 py-1.5 bg-rose-50 rounded-full border border-rose-200 w-fit mx-auto">
                 <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                <span className="text-xs font-bold text-rose-600">Enregistrement en cours... Parlez maintenant</span>
+                <span className="text-xs font-bold text-rose-600">Enregistrement en cours...</span>
               </div>
             )}
             <div className="flex gap-2 items-center">
@@ -325,11 +389,10 @@ export default function Chatbot() {
                     : 'bg-[#fdfbf7] border-[#1A3C34]/10 text-slate-800 focus:ring-[#1A3C34]/20'
                 } disabled:opacity-50`}
               />
-              {/* Bouton Micro */}
               <button
                 onClick={toggleRecording}
                 disabled={isLoading}
-                title={isRecording ? 'Arrêter l\'enregistrement' : 'Enregistrer un vocal'}
+                title={isRecording ? "Arrêter l'enregistrement" : 'Enregistrer un vocal'}
                 className={`w-11 h-11 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
                   isRecording
                     ? 'bg-rose-500 text-white animate-pulse hover:bg-rose-600'
@@ -338,7 +401,6 @@ export default function Chatbot() {
               >
                 {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
               </button>
-              {/* Bouton Envoyer */}
               <button
                 onClick={handleSend}
                 disabled={isLoading || !input.trim()}

@@ -17,15 +17,9 @@ const LANGS: { code: Language; label: string; short: string }[] = [
   { code: 'ff', label: 'Peul', short: 'FF' },
 ];
 
-const EXPLORE_LINKS = [
-  { to: '/gastronomy', label: 'Gastronomie', Icon: Utensils },
-  { to: '/guides', label: 'Guides', Icon: Users },
-  { to: '/accommodations', label: 'Hébergements', Icon: Bed },
-  { to: '/gallery', label: 'Galerie', Icon: Image },
-  { to: '/agenda', label: 'Agenda Culturel', Icon: Calendar },
-  { to: '/testimonials', label: 'Témoignages', Icon: MessageSquare },
-  { to: '/reviews', label: 'Avis', Icon: Star },
-];
+const EXPLORE_ICONS = [Utensils, Users, Bed, Image, Calendar, MessageSquare, Star];
+const EXPLORE_PATHS = ['/gastronomy', '/guides', '/accommodations', '/gallery', '/agenda', '/testimonials', '/reviews'];
+const EXPLORE_KEYS  = ['nav.gastronomy', 'nav.guides', 'nav.accommodations', 'nav.gallery', 'nav.agenda', 'nav.testimonials', 'footer.c.reviews'];
 
 export default function Navbar() {
   const [menuOpen,    setMenuOpen]    = useState(false);
@@ -47,7 +41,12 @@ export default function Navbar() {
   }, []);
 
   const { user, isAuthenticated, logout } = useAuth();
-  const { lang, setLang } = useTranslation();
+  const { lang, setLang, t } = useTranslation();
+  const exploreLinks = EXPLORE_PATHS.map((to, i) => ({
+    to,
+    label: t(EXPLORE_KEYS[i]),
+    Icon:  EXPLORE_ICONS[i],
+  }));
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -115,17 +114,17 @@ export default function Navbar() {
 
               {/* Accueil — always visible */}
               <Link to="/" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors text-sm font-medium">
-                <Home size={15} /> Accueil
+                <Home size={15} /> {t('nav.home')}
               </Link>
 
               {isAuthenticated && (
                 <>
                   <Link to="/discovery" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors text-sm font-medium">
-                    <Compass size={15} /> Découvrir
+                    <Compass size={15} /> {t('nav.discover')}
                   </Link>
 
                   <Link to="/activities" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors text-sm font-medium">
-                    <Activity size={15} /> Activités
+                    <Activity size={15} /> {t('nav.activities')}
                   </Link>
 
                   {/* Explorer dropdown — hover */}
@@ -135,7 +134,7 @@ export default function Navbar() {
                     onMouseLeave={onExploreLeave}
                   >
                     <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors text-sm font-medium">
-                      Explorer
+                      {t('nav.explore')}
                       <ChevronDown size={14} className={`transition-transform duration-200 ${exploreOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {exploreOpen && (
@@ -144,7 +143,7 @@ export default function Navbar() {
                         onMouseEnter={onExploreEnter}
                         onMouseLeave={onExploreLeave}
                       >
-                        {EXPLORE_LINKS.map(({ to, label, Icon }) => (
+                        {exploreLinks.map(({ to, label, Icon }) => (
                           <Link
                             key={to}
                             to={to}
@@ -162,7 +161,7 @@ export default function Navbar() {
                   {/* Mes Réservations — masqué si admin */}
                   {user?.role !== 'admin' && (
                     <Link to="/my-bookings" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors text-sm font-medium">
-                      <Inbox size={15} /> Mes Réservations
+                      <Inbox size={15} /> {t('nav.myReservations')}
                     </Link>
                   )}
 
@@ -171,7 +170,7 @@ export default function Navbar() {
                     to="/contact"
                     className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-700 transition-colors text-sm font-medium ml-1"
                   >
-                    <Mail size={15} /> Contact
+                    <Mail size={15} /> {t('nav.contact')}
                   </Link>
 
                   {/* Admin panel */}
@@ -180,7 +179,7 @@ export default function Navbar() {
                       to="/admin"
                       className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors text-sm font-medium ml-1"
                     >
-                      <LayoutDashboard size={15} /> Panel Admin
+                      <LayoutDashboard size={15} /> {t('nav.adminPanel')}
                     </Link>
                   )}
                 </>
@@ -249,7 +248,7 @@ export default function Navbar() {
                         <p className="text-[10px] text-slate-400 truncate">{user.email}</p>
                         {user.role === 'admin' && (
                           <span className="inline-block mt-1 bg-violet-100 text-violet-700 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
-                            Admin
+                            {t('nav.admin')}
                           </span>
                         )}
                       </div>
@@ -261,14 +260,14 @@ export default function Navbar() {
                           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
                         >
                           <Settings size={16} className="text-slate-400" />
-                          Mon Profil
+                          {t('nav.profile')}
                         </Link>
                         <button
                           onClick={() => { setUserMenuOpen(false); handleLogout(); }}
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-600 transition-colors"
                         >
                           <LogOut size={16} className="text-slate-400" />
-                          Se déconnecter
+                          {t('nav.disconnect')}
                         </button>
                       </div>
                     </div>
@@ -279,7 +278,7 @@ export default function Navbar() {
                   to="/login"
                   className="hidden lg:flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-full text-sm font-semibold hover:bg-emerald-700 transition-colors"
                 >
-                  <LogIn size={15} /> Se connecter
+                  <LogIn size={15} /> {t('nav.connect')}
                 </Link>
               )}
 
@@ -313,24 +312,24 @@ export default function Navbar() {
                 <div className="min-w-0">
                   <p className="text-white font-semibold text-sm truncate">{user.name}</p>
                   {user.role === 'admin' && (
-                    <span className="text-emerald-200 text-xs">Mode Admin</span>
+                    <span className="text-emerald-200 text-xs">{t('nav.modeAdmin')}</span>
                   )}
                 </div>
               </div>
             )}
 
             {/* Base links */}
-            <MobileLink to="/" Icon={Home} label="Accueil" onClick={() => setMenuOpen(false)} />
+            <MobileLink to="/" Icon={Home} label={t('nav.home')} onClick={() => setMenuOpen(false)} />
 
             {isAuthenticated && (
               <>
-                <MobileLink to="/discovery" Icon={Compass} label="Découvrir" onClick={() => setMenuOpen(false)} />
-                <MobileLink to="/activities" Icon={Activity} label="Activités" onClick={() => setMenuOpen(false)} />
+                <MobileLink to="/discovery" Icon={Compass} label={t('nav.discover')} onClick={() => setMenuOpen(false)} />
+                <MobileLink to="/activities" Icon={Activity} label={t('nav.activities')} onClick={() => setMenuOpen(false)} />
 
                 {/* Explorer section */}
                 <div className="pt-2">
-                  <p className="px-3 pb-1 text-[10px] uppercase tracking-[0.2em] text-slate-400 font-bold">Explorer</p>
-                  {EXPLORE_LINKS.map(({ to, label, Icon }) => (
+                  <p className="px-3 pb-1 text-[10px] uppercase tracking-[0.2em] text-slate-400 font-bold">{t('nav.explore')}</p>
+                  {exploreLinks.map(({ to, label, Icon }) => (
                     <MobileLink key={to} to={to} Icon={Icon} label={label} onClick={() => setMenuOpen(false)} />
                   ))}
                 </div>
@@ -338,12 +337,12 @@ export default function Navbar() {
                 {/* Mes Réservations (non admin) */}
                 {user?.role !== 'admin' && (
                   <div className="pt-2">
-                    <MobileLink to="/my-bookings" Icon={Inbox} label="Mes Réservations" onClick={() => setMenuOpen(false)} />
+                    <MobileLink to="/my-bookings" Icon={Inbox} label={t('nav.myReservations')} onClick={() => setMenuOpen(false)} />
                   </div>
                 )}
 
-                <MobileLink to="/profile" Icon={Settings} label="Mon Profil" onClick={() => setMenuOpen(false)} />
-                <MobileLink to="/contact" Icon={Mail} label="Contact" onClick={() => setMenuOpen(false)} />
+                <MobileLink to="/profile" Icon={Settings} label={t('nav.profile')} onClick={() => setMenuOpen(false)} />
+                <MobileLink to="/contact" Icon={Mail} label={t('nav.contact')} onClick={() => setMenuOpen(false)} />
 
                 {/* Admin panel */}
                 {user?.role === 'admin' && (
@@ -352,7 +351,7 @@ export default function Navbar() {
                     onClick={() => setMenuOpen(false)}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-violet-50 text-violet-700 font-semibold text-sm mt-2"
                   >
-                    <LayoutDashboard size={17} /> Panel Admin
+                    <LayoutDashboard size={17} /> {t('nav.adminPanel')}
                   </Link>
                 )}
               </>
@@ -365,7 +364,7 @@ export default function Navbar() {
                   onClick={handleLogout}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-900 text-white font-semibold text-sm hover:bg-slate-700 transition-colors"
                 >
-                  <LogOut size={16} /> Se déconnecter
+                  <LogOut size={16} /> {t('nav.disconnect')}
                 </button>
               ) : (
                 <Link
@@ -373,7 +372,7 @@ export default function Navbar() {
                   onClick={() => setMenuOpen(false)}
                   className="flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 transition-colors"
                 >
-                  <LogIn size={16} /> Se connecter
+                  <LogIn size={16} /> {t('nav.connect')}
                 </Link>
               )}
             </div>
