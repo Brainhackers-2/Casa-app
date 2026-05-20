@@ -208,7 +208,7 @@ export default function Footer() {
 
           {/* QR code */}
           <a
-            href="https://casamance-tourisme-xiih.vercel.app/"
+            href="https://casa-app-si1v.vercel.app/"
             target="_blank"
             rel="noopener noreferrer"
             className="p-3 rounded-3xl backdrop-blur-md shadow-xl transition-all hover:scale-105"
