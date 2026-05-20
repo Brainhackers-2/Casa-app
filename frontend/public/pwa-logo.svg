@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background green rounded -->
+  <rect width="512" height="512" rx="90" fill="#047857"/>
+
+  <!-- Sun -->
+  <circle cx="256" cy="148" r="62" fill="#FCD34D"/>
+  <!-- Sun glow -->
+  <circle cx="256" cy="148" r="78" fill="#FCD34D" opacity="0.25"/>
+
+  <!-- Palm trunk (slight curve right) -->
+  <path d="M248 268 C246 320 242 370 238 428 L278 428 C276 370 268 320 264 268 Z" fill="white" rx="14"/>
+
+  <!-- Frond: top-center -->
+  <path d="M256 255 C254 210 252 185 252 155 C260 170 268 210 258 255 Z" fill="white"/>
+
+  <!-- Frond: top-left -->
+  <path d="M256 260 C230 225 205 205 178 200 C192 225 218 248 254 268 Z" fill="white"/>
+
+  <!-- Frond: mid-left -->
+  <path d="M256 270 C222 245 195 242 162 248 C182 268 215 272 254 278 Z" fill="white"/>
+
+  <!-- Frond: top-right -->
+  <path d="M256 260 C282 225 307 205 334 200 C320 225 294 248 258 268 Z" fill="white"/>
+
+  <!-- Frond: mid-right -->
+  <path d="M256 270 C290 245 317 242 350 248 C330 268 297 272 258 278 Z" fill="white"/>
+
+  <!-- Ocean wave -->
+  <path d="M130 430 Q180 415 230 430 Q280 445 330 430 Q360 420 382 428 L382 470 L130 470 Z" fill="rgba(255,255,255,0.2)"/>
+  <path d="M130 455 Q190 440 256 455 Q322 470 382 455 L382 490 L130 490 Z" fill="rgba(255,255,255,0.12)"/>
+</svg>

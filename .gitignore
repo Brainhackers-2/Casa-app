@@ -1,0 +1,24 @@
+# Dépendances
+frontend/node_modules/
+backend/vendor/
+
+# Builds
+frontend/dist/
+
+# Variables d'environnement (ne jamais commiter)
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+backend/.env
+backend/.env.local
+
+# Système
+.DS_Store
+Thumbs.db
+
+# Éditeurs
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
